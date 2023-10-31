@@ -1,89 +1,102 @@
-# POLICY ITERATION ALGORITHM
+# VALUE ITERATION ALGORITHM
 
 ## AIM
-To implement a policy iteration algorithm for the given MDP.
-
+To develop a Python program to find the optimal policy for the given MDP using the value iteration algorithm.
 
 ## PROBLEM STATEMENT
-The problem statement is a Five stage slippery walk where there are five stages excluding goal and hole.The problem is stochastic thus doesnt allow transition probability of 1 for each action it takes.It changes according to the state and policy.
-## State Space:
-The states include two terminal states: 0-Hole[H] and 6-Goal[G]. It has five non terminal states includin starting state.
+The FrozenLake environment in OpenAI Gym is a gridworld problem that challenges reinforcement learning agents to navigate a slippery terrain to reach a goal state while avoiding hazards. Note that the environment is closed with a fence, so the agent cannot leave the gridworld.
 
-## Action Space:
-.Left:0
+### States:
+5 Terminal States:
+  G (Goal): The state the agent aims to reach.
+  H (Hole): A hazardous state that the agent must avoid at all costs.
+11 Non-terminal States:
+  S (Starting state): The initial position of the agent.
+  Intermediate states: Grid cells forming a layout that the agent must traverse.
 
-.Right:1
+### Actions:
+The agent can take 4 actions in each state:
 
-## Transition Probability:
-The transition probabilities for the problem statement is:
+LEFT
+RIGHT
+UP
+DOWN
+### Transition Probabilities:
+The environment is stochastic, meaning that the outcome of an action is not always certain.
 
-.50% - The agent moves in intended direction.
+33.33% chance of moving in the intended direction.
+66.66% chance of moving in a orthogonal directions.
+This uncertainty adds complexity to the agent's navigation.
 
-.33.33% - The agent stays in the same state.
+### Rewards:
++1 for reaching the goal state(G).
+0 reward for all other states, including the starting state (S) and intermediate states.
 
-.16.66% - The agent moves in orthogonal direction.
+### Episode Termination:
+The episode terminates when the agent reaches the goal state (G) or falls into a hole (H).
 
-## Reward:
-To reach state 7 (Goal) : +1 otherwise : 0
+### Graphical Representation:
+![image](https://github.com/AavulaTharun/rl-value-iteration/assets/93427201/2e9d2983-c59e-4959-a13a-920f91b41df1)
 
-## Graphical Representation:
-![image](https://github.com/Ramsai1234/policy-iteration-algorithm/assets/94269989/45e9f377-033f-4a4b-9d82-ce622c507fd9)
+## VALUE ITERATION ALGORITHM:
+Value iteration is a method of computing an optimal MDP policy and its value.
 
-## POLICY ITERATION ALGORITHM
-The algorithm implemented in the policy_iteration is a method used to find the optimal policy in a Markov decision process (MDP). Here's a step-by-step explanation of the algorithm:
+It begins with an initial guess for the value function, and iteratively updates it towards the optimal value function, according to the Bellman optimality equation.
 
-1.Initialize the policy pi. In this implementation, a random action is chosen for each state s in the MDP P. The initial policy is represented by the lambda function pi=lambda s:{s:a for s,a in enumerate(random_actions)}[s], where random_actions is a list of randomly chosen actions for each state.
+The algorithm is guaranteed to converge to the optimal value function, and in the process of doing so, also converges to the optimal policy.
 
-2.Enter a loop that continues until the policy pi is no longer changing. This is determined by comparing the previous policy (old_pi) with the current policy computed in the loop.
 
-3.Store the previous policy as old_pi for comparison later.
+The algorithm is as follows:
 
-4.Perform policy evaluation using the function policy_evaluation. This step calculates the state-values (V) for each state s given the current policy pi. The state-values represent the expected cumulative rewards starting from state s following policy pi and discounting future rewards by a factor of gamma. The function policy_evaluation is called with the arguments pi, P, gamma, and theta.
+1. Initialize the value function V(s) arbitrarily for all states s.
+2. Repeat until convergence:
+     Initialize aaction-value function Q(s, a) arbitrarily for all states s and actions a.
+     For all the states s and all the action a of every state:
+    Update the action-value function Q(s, a) using the Bellman equation.
+    Take the value function V(s) to be the maximum of Q(s, a) over all actions a.
+    Check if the maximum difference between Old V and new V is less than theta.
+    Where theta is a small positive number that determines the accuracy of estimation.
+3. If the maximum difference between Old V and new V is greater than theta, then
+     Update the value function V with the maximum action-value from Q.
+     Go to step 2.
+4. The optimal policy can be constructed by taking the argmax of the action-value function Q(s, a) over all actions a.
+5. Return the optimal policy and the optimal value function.
 
-5.Perform policy improvement using the function policy_improvement. This step updates the policy pi based on the current state-values V. The function policy_improvement is called with the arguments V, P, and gamma.
+## VALUE ITERATION FUNCTION
+~~~
+def value_iteration(P, gamma=1.0, theta=1e-10):
+    # Initialize the value function V as an array of zeros
+    V = np.zeros(len(P), dtype=np.float64)
+    
+    while True:
+        # Initialize the action-value function Q as an array of zeros
+        Q = np.zeros((len(P), len(P[0])), dtype=np.float64)
+        
+        for s in range(len(P)):
+            for a in range(len(P[s])):
+                for prob, next_state, reward, done in P[s][a]:
+                    # Update the action-value function Q using the Bellman equation
+                    Q[s][a] += prob * (reward + gamma * V[next_state] * (not done))
+        
+        # Check if the maximum difference between Old V and new V is less than theta.
+        if np.max(np.abs(V - np.max(Q, axis=1))) < theta:
+            break
+        
+        # Update the value function V with the maximum action-value from Q
+        V = np.max(Q, axis=1)
 
-6.Check if the policy has converged by comparing the previous policy old_pi with the current policy {s:pi(s) for s in range(len(P))}. If they are the same for all states s, the loop is exited.
-
-7.Return the final state-values V and the optimal policy pi.
-
-To summarize, policy iteration iteratively improves the policy by alternating between policy evaluation and policy improvement steps until convergence is reached. The algorithm guarantees to find the optimal policy for the given MDP P with a discount factor gamma.
-## POLICY IMPROVEMENT FUNCTION
-```
-def policy_improvement(V, P, gamma=1.0):
-    Q = np.zeros((len(P), len(P[0])), dtype=np.float64)
-    # Write your code here to implement policy improvement algorithm
-    for s in range(len(P)):
-      for a in range(len(P[s])):
-        for prob, next_state,reward, done in P[s][a]:
-          Q[s][a]+= prob*(reward+gamma*V[next_state]*(not done))
-          new_pi = lambda s: {s:a for s, a in enumerate(np.argmax(Q, axis=1))}[s]
-
-    return new_pi
-```
-## POLICY ITERATION FUNCTION
-```
-def policy_iteration(P, gamma=1.0,theta=1e-10):
-  random_actions=np.random.choice(tuple(P[0].keys()),len(P))
-  pi = lambda s: {s:a for s, a in enumerate(random_actions)}[s]
-  while True:
-    old_pi = {s:pi(s) for s in range(len(P))}
-    V = policy_evaluation(pi, P,gamma,theta)
-    pi = policy_improvement(V,P,gamma)
-    if old_pi == {s:pi(s) for s in range(len(P))}:
-      break
-  return V,pi
-
-```
+    # Compute the policy pi based on the action-value function Q
+    pi = lambda s: {s: a for s, a in enumerate(np.argmax(Q, axis=1))}[s]
+    
+    return V, pi
+~~~
 ## OUTPUT:
-## Optimal Policy:
+![image](https://github.com/AavulaTharun/rl-value-iteration/assets/93427201/da4a4ed6-a71a-4b0e-97b3-4711ef574b9e)
 
-![image](https://github.com/Ramsai1234/policy-iteration-algorithm/assets/94269989/dd74b2ac-58df-4ca0-8498-d5d022ba66b1)
+![image](https://github.com/AavulaTharun/rl-value-iteration/assets/93427201/d05a3534-a434-42a0-bf28-3759b0cef576)
 
-## Optimal Value Function:
-![image](https://github.com/Ramsai1234/policy-iteration-algorithm/assets/94269989/75655606-f674-4234-aa69-0881acd80db9)
+![image](https://github.com/AavulaTharun/rl-value-iteration/assets/93427201/7467f33f-47ed-4b2b-8bc2-0419bd7b3755)
 
-## Success Rate for Optimal Policy:
-![image](https://github.com/Ramsai1234/policy-iteration-algorithm/assets/94269989/2a11e5ab-5ee4-4318-ad4b-0942d11104d1)
 
 ## RESULT:
-Thus, a program is developed to perform policy iteration for the given MDP.
+Thus, a Python program is developed to find the optimal policy for the given MDP using the value iteration algorithm.
